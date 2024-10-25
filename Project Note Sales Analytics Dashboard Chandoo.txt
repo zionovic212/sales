@@ -1,0 +1,145 @@
+***Key Features Learnt
+
+- Dashboard Design
+- DAX Measures
+- Time Intelligence
+- KPI Cards
+- Reference Labels
+- Conditional Formatting
+- Tooltips
+- Fields Parameters ✔️ This is a game changer. You can select multiple parameters to be displayed in a single chart.
+- Bookmarks
+- Dynamics Trend
+- Grouping
+- Histogram Charts
+- Zoom Slider
+- Table Design
+- Alerts Icons
+
+
+
+Business Problem
+- Chocolate Sales Analytics
+- Sales, Boxes, Costs & Profits
+- Performance of Sales-persons & Product performance
+- Low box shipment(details later)
+- MoM & YoY changes to key metrics
+
+
+Step 1: Data Model - Star Schema
+Data is stored in 5 tables
+- Table Shipments is the fact table
+- 4 dimension table: Sales Person, Product, Geography, Calendar
+Every shipment of the chocolate is done by sales person, on a specific product, and the shipment is sent to a specific geography, on a specific date.
+
+
+Step 2: Calculations needed for analysis
+- Total sales
+     Total Sales = SUM(shipments[sales])
+
+- Total boxes
+    Total Boxes = SUM(shipments[boxes])
+
+- Total shipments
+    Total Shipments = COUNTROWS(shipments)
+
+- Total cost (i.e. total cost per shipment)
+    Total Cost = SUMX(shipments, shipments[Boxes] * RELATED(products[Cost per box]))
+
+- Total profit   
+    Total Profit = [Total Sales] - [Total Cost]
+
+
+- Profit %
+    Profit % = DIVIDE(Total Profit, Total Cost)   ----[Chandoo made a mistake in his calculation, he used total profit/ total sales]
+
+- LBS(Low box shipment) count.. How many shipment have less than 50 boxes of chocolate.
+    LBS Count = CALCULATE([Total Shipments], shipments[Boxes]<50)
+
+- LBS %
+    LBS % = DIVIDE([LBS count], [Total shipments])
+    
+- MoM changes (This means the changes from one month to another. i.e. percentage change from Jan to Feb, Feb to March, etc. )
+  - Create a new column in the calendar table for the calculations.
+  - To calculate MoM changes in total sales. We need to create a another measure(in DAX) that will calculate 'total sales' previous month
+    This measure will now be used to calculate the % difference between the months (MoM Sales Changes %).
+
+  Total Sales (prev month) = CALCULATE([Total Sales], PREVIOUSMONTH('calender'[Date]))
+  PREVIOUSMONTH is a built-in function.
+
+  MoM Sales Changes % =
+	Var this_month = [Total Sales]
+	Var prev_month = [Total sales (prev)]
+  return
+	DIVIDE(this_month - prev_month, pre_month)
+
+- YoY changes
+
+It is normal to keep calculations and measures inside one of the tables in the data model. However, when you want include many
+calculations inside your project, it is cleaner/clearer to just create a separate "measure" table.
+
+**If you are using a calendar table in your project, ALWAYS mark it has date table.
+- It will tell Power BI that this is our date table and should be used for all time intelligence calculations.
+
+DATE/CALENDER
+**When dealing with date related calculation, visuals or analysis.
+Firstly, note that it is better to have a calendar table.
+In the calendar table, make sure you have 'Start of the month' column. This is useful in cases where you want to calculate date trend in month
+and you want it follow chronological order(Jan, Feb, March).
+If you don't have start of the month and you use 'month' or 'name of month' you will have an Ascending or descending order arrangement based
+on the measure, which is not helpful.
+
+Step 3: Create dashboard
+- First, edit the canvas and customise the width and length. Using 1080(H) * 1920(W)
+- Create all the cards, using new card
+- Add 'reference labels', this is something new. Never used it before.(Something like comparison at a glance)
+
+- When I added the reference label(MoM sales change %) to the Total Sales card. Nothing came out and it makes no sense. This is a problem that needed to be solved.
+- To solve the above problem, I need to create a new measure called 'Latest Date', this will capture the last date in the 'Start of Month' column.
+    Latest Date = LASTDATE('calendar'[start of Month])
+
+- Then we added another measure called 'Total Sales Latest Month'
+    Total Sales Latest Month = 
+	Var ld = [Latest Date]
+     Return
+	CALCULATE([Total Sales], 'calendar'[Start of Month] = ld)
+
+- Then we add another measure called 'Latest MoM Sales Change %'
+    Latest MoM Sales Change % =
+	var ld = [Latest Date]
+	var this_month_sales = [Total Sales Latest Month]
+	var prev_month_sales = CALCULATE([Total Sales], 'calendar'[Start of Month]= EDATE(ld,-1))
+
+    Return
+	DIVIDE(this_month_sales - prev_month_sales, prev_month_sales)
+
+- Save and Publish the project
+
+
++++++++VISUALIZATION++++++++
+|			   |
+|			   |
+++++++++++++++++++++++++++++
+
+---Low Shipment Analysis Chart---
+- First, I create a NEW GROUP inside the shipment table. What does new group mean?
+New Group is a BIN size in histogram. It is used when the range of the data to be inserted in the Y or X axis is too long.
+The group is created from the Box column.
+- Create a histogram(stacked column chart) and toggle-on the zoom slider.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
